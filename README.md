@@ -6,6 +6,13 @@ Important: This repo **assumes** that there are several docker images in DockerH
 
 ---
 
+### Breakdown of Part 4 (by sub-directory)
+
+-   01-simplek8s: Two simple YAML files that can be used with "kubectl apply"
+-   02-deployment: Rather than just a Pod, use a "Deployment" to control pods
+
+### Installation of MiniKube and Kubectl
+
 ##### Installation Instructions from Instructor
 
 NOTE: kubectl seems to be installed already, guessing that Docker for MacOS installed it, but I ended up updating it. Had to delink from /usr/local/bin

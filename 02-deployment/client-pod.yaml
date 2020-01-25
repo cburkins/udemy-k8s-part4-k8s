@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+    name: client-pod
+    labels:
+        component: web
+spec:
+    containers:
+        # Name is arbitrary, helps us to identify logs
+        - name: client
+          # this image will be downloaded from DockerHub
+          image: cburkins/multi-client
+          # Expose this port to outside world (won't give us access, needs networking service)
+          ports:
+              - containerPort: 3000
