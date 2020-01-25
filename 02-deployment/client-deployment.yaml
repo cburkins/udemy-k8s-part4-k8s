@@ -4,7 +4,7 @@ metadata:
     name: client-deployment
 spec:
     # Number of (idential) Pods that this Deployment will make
-    replicas: 1
+    replicas: 5
     selector:
         # This is how Deployment will later find/match Pods created by this Deployment
         matchLabels:
@@ -17,6 +17,6 @@ spec:
         spec:
             containers:
                 - name: client
-                  image: cburkins/multi-client
+                  image: cburkins/multi-worker
                   ports:
-                      - containerPort: 3000
+                      - containerPort: 9999
