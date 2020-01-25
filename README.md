@@ -156,3 +156,9 @@ spec:
           ports:
               - containerPort: 3000
 ```
+
+### Forcing Cluster to Pull Down Updated (tagged) Image for Container
+
+```
+kubectl set image deployment/client-deployment client=cburkins/multi-client:v5
+```
