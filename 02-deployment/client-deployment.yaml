@@ -3,10 +3,13 @@ kind: Deployment
 metadata:
     name: client-deployment
 spec:
+    # Number of (idential) Pods that this Deployment will make
     replicas: 1
     selector:
+        # This is how Deployment will later find/match Pods created by this Deployment
         matchLabels:
             component: web
+    # Config for every single Pod created by this Deployment
     template:
         metadata:
             labels:
@@ -14,6 +17,6 @@ spec:
         spec:
             containers:
                 - name: client
-                  image: cburkins/mutli-client
+                  image: cburkins/multi-client
                   ports:
                       - containerPort: 3000
