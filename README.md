@@ -8,25 +8,154 @@ Important: This repo **assumes** that there are several docker images in DockerH
 
 ### Breakdown of Part 4 (by sub-directory)
 
--   01-simplek8s: Two simple YAML files that can be used with "kubectl apply"
--   02-deployment: Rather than just a Pod, use a "Deployment" to control pods
+-   **01-simplek8s: Two simple YAML files that can be used with "kubectl apply"**
+    This is only a partial deployment of our previous artifically-complex application. Rather than deploy the React front-end client along with Redis etc, this academic example only deploys the React front-end.
+-   **02-deployment: Rather than just a Pod, use a "Deployment" to control pods**
+    Replaces "client-pod.yaml" with "client-deployment.yaml". Still need "client-node-port.yaml".
 
-### Installation of MiniKube and Kubectl
+### Deviation from Class
 
-##### Installation Instructions from Instructor
+NOTE: Instructor used "minikube" to create a single-node kubernetes cluster on the local host. minikube ships with "hyperkit" hypervisor, but I had trouble with that. Minikube VM couldn't ping outside world. Switched from hyperkit to virtualbox hypervisor. Virtualbox refused to install on my Mac. 6 months later, I'm trying these directions again. Booted into Recovery mode on my work MPB, and won't let me open a terminal. So, now switching from Minikube to Docker's Kubernetes. Seems simpler.
 
-NOTE: kubectl seems to be installed already, guessing that Docker for MacOS installed it, but I ended up updating it. Had to delink from /usr/local/bin
+### Enable Kubernetes within Docker Desktop
+
+1. Using MacOS Taskbar at top, open "Docker Preferences"
+1. Enable kubernetes
+1. Check that the cluster is running via "kubectl config view"
+
+    ```
+    [cburkin@LocalMac ~/code/udemy-k8s-part4-k8s (master)]
+    $ kubectl config view
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority-data: DATA+OMITTED
+        server: https://kubernetes.docker.internal:6443
+    name: docker-desktop
+    contexts:
+    - context:
+        cluster: docker-desktop
+        user: docker-desktop
+    name: docker-desktop
+    current-context: docker-desktop
+    kind: Config
+    preferences: {}
+    users:
+    - name: docker-desktop
+    user:
+        client-certificate-data: REDACTED
+        client-key-data: REDACTED
+
+    ```
+
+### Using our Cluster
+
+##### Create our first pods within the single-node Cluster
+
+NOTE: applies all YAML files in the directory to our cluster master node
 
 ```
-brew install kubectl
+[cburkin@LocalMac ~/code/udemy-k8s-part4-k8s (master)]
+$ kubectl apply -f ./01-simlek8s/
+service/client-node-port created
+pod/client-pod created
 
-Download & Install virtualbox for macos
+[cburkin@LocalMac ~/code/udemy-k8s-part4-k8s (master)]
+$
 
-brew cask install minikube
-brew install minikube
+# In a browser, navigate to http://localhost:31515
+
 ```
 
-##### Checkpoint: Start & Verify Cluster
+##### Delete that config
+
+```
+[cburkin@LocalMac ~/code/udemy-k8s-part4-k8s (master)]
+$ kubectl delete -f ./01-simlek8s/
+service "client-node-port" deleted
+pod "client-pod" deleted
+```
+
+##### Re-create pod & service using deployment
+
+```
+[cburkin@LocalMac ~/code/udemy-k8s-part4-k8s (master)]
+$ kubectl apply -f ./02-deployment/
+deployment.apps/client-deployment created
+service/client-node-port created
+
+# In a browser, navigate to http://localhost:31515
+```
+
+##### Delete that config
+
+```
+[cburkin@LocalMac ~/code/udemy-k8s-part4-k8s (master)]
+$ kubectl delete -f ./02-deployment/
+deployment.apps "client-deployment" deleted
+service "client-node-port" deleted
+
+[cburkin@LocalMac ~/code/udemy-k8s-part4-k8s (master)]
+$ kubectl get pods
+No resources found in default namespace.
+
+[cburkin@LocalMac ~/code/udemy-k8s-part4-k8s (master)]
+$ kubectl get services
+NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   3h31m
+```
+
+##### Appendix: Running ubuntu linux container without exiting
+
+You'll need to loop forever so container image doesn't exit
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+    name: client-pod
+    labels:
+        component: web
+spec:
+    containers:
+        # Name is arbitrary, helps us to identify logs
+        - name: client
+          # this image will be downloaded from DockerHub
+          image: ubuntu
+          # Just spin & wait forever (otherwise container will exit)
+          command: ["/bin/bash", "-c", "--"]
+          args: ["while true; do sleep 30; done;"]
+          # Expose this port to outside world (won't give us access, needs networking service)
+          ports:
+              - containerPort: 3000
+```
+
+##### Appendix: Install Virtualbox (which might fail on Mac OS X)
+
+```
+$ brew cask install virtualbox
+```
+
+If it fails, check SystemPrefs->Security->Allow
+
+If there's no "Allow" checkbox on "General" tab, you can manually add "Oracle" to authorized installers
+Reference: https://superuser.com/questions/1436347/cant-allow-virtualbox-installation-in-security-privacy-under-macos
+
+-   Start in Recovery Mode (command-r)
+-   From menu at top, select terminal
+
+```
+spctl kext-consent add VB5E2TV963
+```
+
+Reboot and install virtualbox
+
+```
+# To start with virtualbox driver
+$ minikube start --vm-driver=virtualbox
+```
+
+##### Checkpoint: Start & Verify Single-Node Cluster
 
 ```
 $ minikube start (will create VM)
@@ -52,113 +181,4 @@ kubeconfig: Configured
 
 $ kubectl get pods
 No resources found in default namespace.
-```
-
-##### Config
-
-NOTE: mini-client image needs to be up on DockerHub
-
-##### Examples of k8s Objects
-
-1. StatefulSet
-1. ReplicaController
-1. Pod
-1. Service (configures networking)
-
-##### Examples of apiVersion
-
-Sort of annoying, gives you a different set of objects to use
-
-1. v1 (componentStatus, Endpoints, Event, Pod, etc)
-1. apps/v1 (ControllerRevision, StatefulSet)
-
-Common hiearchy of K8s:
-
-1. Node runs a Pod
-1. Pod runs a container
-
-Pods run closely related containers
-
-![image](https://user-images.githubusercontent.com/9342308/72815506-c045fe80-3c34-11ea-85b1-755e838dd978.png)
-
-### Create our first Cluster
-
-```
-$ kubectl apply -f ./client-pod.yaml
-pod/client-pod created
-
-$ kubectl apply -f ./client-node-port.yaml
-service/client-node-port created
-
-$ minicube ip
-192.168.64.2
-
-# In a browser, navigate to http://192.168.64.2:31515
-```
-
-### Troubleshooting minikube
-
-```
-minikube stop
-minikube delete
-
-# Puts you instide minikube VM (see if you can ping www.google.com)
-$ minikube ssh
-
-```
-
-### If minikube can't ping outside world, switch from hyperkit to Virtual Box
-
-```
-# To start with virtualbox driver
-$ minikube start --vm-driver=virtualbox
-```
-
-### Install Virtualbox (which might fail on Mac OS X)
-
-```
-$ brew cask install virtualbox
-```
-
-If it fails, check SystemPrefs->Security->Allow
-
-If there's no "Allow" checkbox, you can manually add "Oracle" to authorized installers
-Reference: https://superuser.com/questions/1436347/cant-allow-virtualbox-installation-in-security-privacy-under-macos
-
--   Start in Recovery Mode (command-r)
--   From menu at top, select terminal
-
-```
-spctl kext-consent add VB5E2TV963
-```
-
-### Running ubuntu linux container without exiting
-
-You'll need to loop forever so container image doesn't exit
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-    name: client-pod
-    labels:
-        component: web
-spec:
-    containers:
-        # Name is arbitrary, helps us to identify logs
-        - name: client
-          # this image will be downloaded from DockerHub
-          image: ubuntu
-          # Just spin & wait forever (otherwise container will exit)
-          command: ["/bin/bash", "-c", "--"]
-          args: ["while true; do sleep 30; done;"]
-          # Expose this port to outside world (won't give us access, needs networking service)
-          ports:
-              - containerPort: 3000
-```
-
-### Forcing Cluster to Pull Down Updated (tagged) Image for Container
-
-```
-kubectl set image deployment/client-deployment client=cburkins/multi-client:v5
 ```
